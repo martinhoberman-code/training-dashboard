@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Martin — Training Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F7F7F5;
+    --card: #FFFFFF;
+    --border: #E4E2DD;
+    --ink: #23211D;
+    --ink-soft: #63605A;
+    --accent: #B5501C;
+    --accent-soft: #F3E3D8;
+    --good: #3F6B4A;
+    --good-soft: #E4EEE6;
+    --warn: #9C6B12;
+    --warn-soft: #F6ECD9;
+    --core: #5C5A9C;
+    --core-soft: #E7E6F3;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 20px 20px 60px; }
+  header.topbar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+  }
+  header.topbar h1 { font-size: 20px; margin: 0; }
+  header.topbar .sub { color: var(--ink-soft); font-size: 12.5px; }
+  nav.tabs {
+    display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    background: none; border: none; padding: 9px 14px; font-size: 13.5px; font-weight: 600;
+    color: var(--ink-soft); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 14.5px; margin: 0 0 10px; }
+  .card h3 { font-size: 13px; margin: 14px 0 6px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 700px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  .stat { text-align: center; padding: 10px 6px; }
+  .stat .num { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat .lbl { font-size: 11.5px; color: var(--ink-soft); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  }
+  .badge.good { background: var(--good-soft); color: var(--good); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.core { background: var(--core-soft); color: var(--core); }
+  .badge.accent { background: var(--accent-soft); color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--ink-soft); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  select, input[type=text], input[type=number], input[type=date], textarea {
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; font-size: 13.5px;
+    font-family: inherit; background: #fff; color: var(--ink); width: 100%;
+  }
+  label { display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 3px; font-weight: 600; }
+  .field { margin-bottom: 10px; }
+  button.btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  button.btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+  button.btn.small { padding: 5px 10px; font-size: 12px; }
+  button.btn:hover { opacity: .9; }
+  .exrow {
+    display: grid; grid-template-columns: 1.6fr .7fr .7fr .8fr .6fr 1.2fr auto;
+    gap: 6px; align-items: end; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);
+  }
+  @media (max-width: 800px) { .exrow { grid-template-columns: 1fr 1fr; } }
+  .exrow button { align-self: center; }
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pill {
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: #fff;
+    font-size: 12.5px; cursor: pointer; color: var(--ink-soft);
+  }
+  .pill.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .exercise-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .exercise-card .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .exercise-card .title-row strong { font-size: 13.5px; }
+  .exercise-card ul { margin: 4px 0 0; padding-left: 18px; }
+  .exercise-card ul li { margin-bottom: 2px; }
+  .exercise-card .mistakes { color: var(--warn); }
+  .note-box {
+    background: var(--accent-soft); border-radius: 10px; padding: 10px 13px; font-size: 12.5px; color: #6B3410;
+    margin-bottom: 12px;
+  }
+  .empty { color: var(--ink-soft); font-size: 13px; padding: 10px 0; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .small-muted { font-size: 11.5px; color: var(--ink-soft); }
+  .chart-wrap { height: 220px; position: relative; }
+  textarea { min-height: 60px; resize: vertical; }
+  .sources { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
+  .sources a { color: var(--ink-soft); }
+  .backup-box textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; min-height: 90px; }
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <h1>Martin's Training Dashboard</h1>
+      <div class="sub">RPE-based programming · updated as you log sessions</div>
+    </div>
+    <div class="field" style="width:220px; margin:0;">
+      <label>Program phase</label>
+      <select id="phaseSelect"></select>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="today" class="active">Today</button>
+    <button data-tab="log">Log Session</button>
+    <button data-tab="progress">Progress</button>
+    <button data-tab="library">Exercise Library</button>
+    <button data-tab="backcare">Back Care</button>
+    <button data-tab="data">Backup</button>
+  </nav>
+
+  <!-- TODAY -->
+  <div class="panel active" id="panel-today">
+    <div class="card" id="phaseNote"></div>
+
+    <div class="card">
+      <h2>Snapshot</h2>
+      <div class="grid3">
+        <div class="stat"><div class="num" id="statSessions">0</div><div class="lbl">Sessions logged</div></div>
+        <div class="stat"><div class="num" id="statLast">—</div><div class="lbl">Last session</div></div>
+        <div class="stat"><div class="num" id="statStreak">0</div><div class="lbl">Days since last back-care</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Muscle group freshness</h2>
+      <div class="small-muted" style="margin-bottom:8px;">Days since each group was last trained — stalest groups get prioritized below.</div>
+      <div id="freshnessList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Suggested next session</h2>
+      <div id="recommendation"></div>
+    </div>
+  </div>
+
+  <!-- LOG SESSION -->
+  <div class="panel" id="panel-log">
+    <div class="card">
+      <h2>New session</h2>
+      <div class="grid2">
+        <div class="field"><label>Date</label><input type="date" id="logDate"></div>
+        <div class="field"><label>Session name</label><input type="text" id="logName" placeholder="e.g. Full Body A"></div>
+      </div>
+      <h3>Exercises</h3>
+      <div id="exRows"></div>
+      <button class="btn secondary small" id="addRowBtn" type="button">+ Add exercise</button>
+      <div class="field" style="margin-top:12px;">
+        <label>Session notes</label>
+        <textarea id="logNotes" placeholder="Energy, how it felt, anything to flag..."></textarea>
+      </div>
+      <button class="btn" id="saveSessionBtn" type="button">Save session</button>
+    </div>
+
+    <div class="card">
+      <h2>Recent sessions</h2>
+      <div id="recentSessions"></div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="panel" id="panel-progress">
+    <div class="card">
+      <h2>Exercise trend</h2>
+      <div class="field" style="max-width:320px;">
+        <label>Exercise</label>
+        <select id="progressExercise"></select>
+      </div>
+      <div class="chart-wrap"><canvas id="progressChart"></canvas></div>
+      <div id="progressSuggestion" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2>Full log</h2>
+      <div id="fullLogTable"></div>
+    </div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div class="panel" id="panel-library">
+    <div class="card">
+      <h2>Exercise form library</h2>
+      <div class="pill-row" id="categoryFilter"></div>
+      <input type="text" id="librarySearch" placeholder="Search exercises..." style="margin-bottom:12px;">
+      <div id="libraryList"></div>
+    </div>
+  </div>
+
+  <!-- BACK CARE -->
+  <div class="panel" id="panel-backcare">
+    <div class="card">
+      <h2>Why this matters for you</h2>
+      <div class="note-box">
+        Your profile flags a weak lower back and tight lower traps — and carrying two young kids means your spine is under
+        unplanned, unpredictable load every day, not just in the gym. The moves below build the stability that protects
+        your back during both training and the "pick the toddler up off the floor for the tenth time today" moments.
+        Aim for the 5-minute routine most days, even on rest days.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5-minute daily back-care routine</h2>
+      <div id="backCareRoutine"></div>
+    </div>
+
+    <div class="card">
+      <h2>Lifting &amp; carrying kids without wrecking your back</h2>
+      <ul id="parentingTips"></ul>
+      <div class="sources" id="parentingSources"></div>
+    </div>
+  </div>
+
+  <!-- DATA -->
+  <div class="panel" id="panel-data">
+    <div class="card backup-box">
+      <h2>Copy log for Claude</h2>
+      <div class="small-muted" style="margin-bottom:8px;">
+        Paste this into a chat with Claude (e.g. your Workout project) any time you want deeper coaching on your progression —
+        it's formatted to match your lift-log format.
+      </div>
+      <textarea id="claudeFormatOut" readonly></textarea>
+      <button class="btn small" id="copyClaudeBtn" type="button" style="margin-top:8px;">Copy to clipboard</button>
+    </div>
+
+    <div class="card backup-box">
+      <h2>Backup &amp; restore</h2>
+      <div class="small-muted" style="margin-bottom:8px;">
+        Your data lives only in this browser. Copy a backup every so often and save it somewhere safe.
+      </div>
+      <textarea id="backupOut" readonly></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+        <button class="btn small secondary" id="copyBackupBtn" type="button">Copy backup</button>
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label>Restore from backup</label>
+        <textarea id="restoreIn" placeholder="Paste a backup JSON here..."></textarea>
+      </div>
+      <button class="btn small secondary" id="restoreBtn" type="button">Restore</button>
+      <button class="btn small" id="resetBtn" type="button" style="background:#8B2E1F; margin-left:8px;">Reset all data</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= DATA MODEL ================= */
+const STORAGE_KEY = 'martin_dashboard_v1';
+const PHASES = {
+  calibration: {
+    label: 'Return-to-training calibration',
+    note: `<strong>Calibration week mode.</strong> Programming avoids heavy barbell OHP and conventional deadlifts —
+      favoring dumbbell/machine variations while your shoulder and back settle in. Everything targets RPE 6–7.
+      Once you've logged a few solid sessions pain-free, switch the phase dropdown to "Normal progressive programming."`,
+  },
+  normal: {
+    label: 'Normal progressive programming',
+    note: `<strong>Normal programming mode.</strong> Full exercise pool is in play at RPE 7–9 for hypertrophy work
+      (8–9 for pure strength work). Add load per the progression rule: +2.5kg upper compounds, +5kg lower compounds,
+      once you hit the top of a rep range at target RPE for 2 sessions in a row. Still keep back-care work in every session.`,
+  }
+};
+
+const CATEGORIES = ['Chest','Back','Shoulders','Arms','Legs','Core'];
+
+const EXERCISES = [
+  { name:'Dumbbell Bench Press', category:'Chest', type:'compound', current:true,
+    cues:['Retract and pin shoulder blades before unracking','Lower to just above chest, elbows ~45° from torso','Drive feet into the floor and press dumbbells up and slightly in'],
+    mistakes:['Flaring elbows to 90°, which stresses the shoulder','Bouncing the weight off the chest'] },
+  { name:'Barbell Bench Press', category:'Chest', type:'compound', paused:true,
+    cues:['Grip just outside shoulder width, wrists stacked over elbows','Plant feet, slight arch, squeeze shoulder blades together','Bar path touches lower chest, drive up and slightly back toward face'],
+    mistakes:['Flaring elbows straight out to the sides','Losing shoulder blade retraction mid-set'] },
+  { name:'Incline Dumbbell Press', category:'Chest', type:'compound',
+    cues:['Bench at 30–45°, not steeper','Press dumbbells up and slightly together at the top','Control the eccentric — 2–3 seconds down'],
+    mistakes:['Setting incline too steep, turning it into a shoulder press'] },
+  { name:'Incline Bench Press', category:'Chest', type:'compound', paused:true,
+    cues:['Same setup cues as flat bench, bench at 30–45°','Bar path to upper chest, not the neck'],
+    mistakes:['Flaring elbows, shortening range of motion'] },
+
+  { name:'Chest-Supported Row', category:'Back', type:'compound', current:true,
+    cues:['Chest pinned to pad, no momentum from the torso','Pull elbows back and slightly down, squeeze shoulder blades','Pause briefly at full contraction'],
+    mistakes:['Yanking with momentum instead of squeezing the back'] },
+  { name:'Barbell Bent Over Row', category:'Back', type:'compound', paused:true,
+    cues:['Hinge at hips ~45°, flat back, soft knees','Pull bar to lower ribs, elbows close to body','Brace core hard throughout — this is a spinal-load exercise'],
+    mistakes:['Rounding the lower back to heave the weight up','Standing too upright, turning it into a shrug'] },
+  { name:'Lat Pulldown', category:'Back', type:'compound', current:true,
+    cues:['Slight lean back, chest up','Pull bar to upper chest, driving elbows down and back','Control the return — don\'t let the weight stack slam'],
+    mistakes:['Pulling behind the neck','Using body swing instead of lats'] },
+
+  { name:'Barbell OHP', category:'Shoulders', type:'compound', paused:true,
+    cues:['Grip just outside shoulders, bar starts at collarbone','Brace core and glutes hard before pressing — this loads the spine','Press bar in a straight line, head moves through at the top'],
+    mistakes:['Excessive lower back arch to help the bar up — the flag to stop if shoulder/back flare up'] },
+  { name:'Lateral Raise (DB)', category:'Shoulders', type:'accessory',
+    cues:['Slight bend in elbows, lead with the elbow not the hand','Raise to shoulder height, not higher','Control the negative — don\'t let momentum swing it up'],
+    mistakes:['Using too much weight and turning it into a shrug/swing'] },
+  { name:'Face Pull', category:'Shoulders', type:'accessory', current:true, backCare:true,
+    cues:['Cable at upper-chest to head height','Pull toward face, hands finishing beside ears, elbows high','Squeeze shoulder blades together and slightly down — this is the lower-trap cue'],
+    mistakes:['Pulling with the elbows low (turns into a lat pull, not a rear-delt/lower-trap move)'] },
+
+  { name:'Barbell Curl', category:'Arms', type:'accessory',
+    cues:['Elbows pinned to sides throughout','Curl without swinging the torso','Squeeze at the top, control the lowering'],
+    mistakes:['Using body momentum ("cheat curling") to move heavier weight'] },
+  { name:'Tricep Pushdown (cable)', category:'Arms', type:'accessory',
+    cues:['Elbows pinned to sides, not flaring out','Full extension at the bottom, brief squeeze','Control the return, don\'t let the cable yank the arm up'],
+    mistakes:['Leaning over the bar and using shoulders/lats to assist'] },
+
+  { name:'Goblet Squat', category:'Legs', type:'compound', current:true,
+    cues:['Hold dumbbell/kettlebell close to chest','Sit down between the knees, chest tall','Knees track over toes, full depth if mobility allows'],
+    mistakes:['Letting the chest collapse forward as you descend'] },
+  { name:'Squat', category:'Legs', type:'compound', paused:true,
+    cues:['Bar on upper traps (high bar) or rear delts (low bar)','Brace core hard, unrack, take 2–3 steps back','Sit hips down and back, knees track toes, hips and chest rise together'],
+    mistakes:['Knees caving inward under heavier loads','Losing core brace and letting the lower back round at the bottom'] },
+  { name:'Leg Press', category:'Legs', type:'compound', current:true,
+    cues:['Feet shoulder width, mid-to-high on the platform','Lower until knees reach ~90°, don\'t let lower back round off the pad','Press through the whole foot, not just the toes'],
+    mistakes:['Letting the lower back lift off the pad at the bottom — reduce depth/load if this happens'] },
+  { name:'Bulgarian Split Squat', category:'Legs', type:'compound', current:true,
+    cues:['Rear foot elevated on a bench, most weight on the front leg','Torso stays fairly upright, front shin close to vertical','Drive through the front heel to stand'],
+    mistakes:['Letting the front knee cave inward','Placing the rear foot too high, overloading the lower back for balance'] },
+  { name:'Leg Curl', category:'Legs', type:'accessory',
+    cues:['Full range of motion, avoid hips lifting off the pad','Squeeze hamstrings at the top of the curl','Control the eccentric'],
+    mistakes:['Using momentum/bouncing instead of a controlled squeeze'] },
+  { name:'Romanian Deadlift', category:'Legs', type:'compound', paused:true,
+    cues:['Soft knees, hinge at the hips, bar/dumbbells stay close to the legs','Flat back throughout — stop the descent when you feel the hamstring stretch limit','Drive hips forward to stand, squeeze glutes at the top'],
+    mistakes:['Rounding the lower back to chase more range of motion — this is the #1 back-tweak risk for you, keep it light and clean'] },
+  { name:'DB Romanian Deadlift', category:'Legs', type:'compound', current:true,
+    cues:['Same hinge pattern as barbell RDL, dumbbells close to the shins','Flat back, stop at your hamstring stretch limit, not a fixed range','Squeeze glutes to stand, don\'t yank with the lower back'],
+    mistakes:['Rounding the back to reach further down — depth is earned by hip mobility, not lower back flexion'] },
+  { name:'Conventional Deadlift', category:'Legs', type:'compound', paused:true,
+    cues:['Bar over mid-foot, shins nearly touching the bar','Flat back, chest up, brace hard before the pull','Push the floor away — bar and hips rise together'],
+    mistakes:['Rounding the lower back at the bottom — the single biggest risk factor for your back; do not push through this'] },
+
+  { name:'Bird Dog', category:'Core', type:'backcare', backCare:true,
+    cues:['All fours, hands under shoulders, knees under hips','Extend opposite arm and leg straight out, hips level (don\'t let them rotate)','Hold 2–3 seconds, return with control'],
+    mistakes:['Letting the low back sag or arch to gain range'] },
+  { name:'Side Plank', category:'Core', type:'backcare', backCare:true,
+    cues:['Elbow under shoulder, knees or feet stacked','Lift hips until body is a straight line shoulder-to-knee/ankle','Brace, don\'t let hips sag'],
+    mistakes:['Letting the hips drop mid-hold'] },
+  { name:'Modified Curl-Up (McGill)', category:'Core', type:'backcare', backCare:true,
+    cues:['One leg straight, one knee bent, hands under the small of the low back','Lift head/shoulders slightly as one rigid unit, low back stays pressed into hands','Hold, breathe, lower with control'],
+    mistakes:['Flexing through the lower back or crunching high off the floor — the point is a small lift, not a sit-up'] },
+  { name:'Dead Bug', category:'Core', type:'backcare', backCare:true,
+    cues:['Lie on back, arms up, knees at 90°','Press low back flat into the floor and keep it there the whole set','Extend opposite arm and leg slowly, return, alternate'],
+    mistakes:['Letting the low back arch off the floor as the leg extends — that\'s the rep failing, stop the range there'] },
+  { name:'Pallof Press', category:'Core', type:'backcare', backCare:true,
+    cues:['Stand sideways to a cable/band at chest height, step out for tension','Press handle straight out from chest, arms fully extend','Resist rotation — feet, hips, and shoulders stay square the whole time'],
+    mistakes:['Letting the hips or shoulders rotate toward the anchor — that defeats the point of the exercise'] },
+];
+
+const DEFAULT_DATA = { phase: 'calibration', sessions: [] };
+function cloneDefault() { return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return cloneDefault();
+    const parsed = JSON.parse(raw);
+    if (!parsed.sessions) parsed.sessions = [];
+    if (!parsed.phase) parsed.phase = 'calibration';
+    return parsed;
+  } catch(e) { return cloneDefault(); }
+}
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); }
+
+let DATA = loadData();
+
+/* ================= UTIL ================= */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function fmtDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function exerciseInfo(name) { return EXERCISES.find(e => e.name === name); }
+function allExerciseNames() { return EXERCISES.map(e=>e.name); }
+
+/* ================= TABS ================= */
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  if (btn.dataset.tab === 'progress') renderProgressTab();
+  if (btn.dataset.tab === 'data') renderDataTab();
+});
+
+/* ================= PHASE ================= */
+const phaseSelect = document.getElementById('phaseSelect');
+Object.entries(PHASES).forEach(([key, p]) => {
+  const opt = document.createElement('option');
+  opt.value = key; opt.textContent = p.label;
+  phaseSelect.appendChild(opt);
+});
+phaseSelect.value = DATA.phase;
+phaseSelect.addEventListener('change', () => {
+  DATA.phase = phaseSelect.value; saveData(); renderToday();
+});
+
+/* ================= TODAY TAB ================= */
+function renderToday() {
+  document.getElementById('phaseNote').innerHTML = `<h2>${PHASES[DATA.phase].label}</h2><div class="note-box" style="margin-bottom:0;">${PHASES[DATA.phase].note}</div>`;
+
+  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  document.getElementById('statSessions').textContent = sessions.length;
+  document.getElementById('statLast').textContent = sessions.length ? fmtDate(sessions[0].date) : '—';
+
+  // last backcare date
+  let lastBackcare = null;
+  sessions.forEach(s => s.exercises.forEach(ex => {
+    const info = exerciseInfo(ex.name);
+    if (info && info.backCare) {
+      if (!lastBackcare || new Date(s.date) > new Date(lastBackcare)) lastBackcare = s.date;
+    }
+  }));
+  document.getElementById('statStreak').textContent = lastBackcare ? daysBetween(lastBackcare, todayStr()) : '—';
+
+  // freshness per category
+  const lastTrained = {};
+  CATEGORIES.forEach(c => lastTrained[c] = null);
+  sessions.forEach(s => s.exercises.forEach(ex => {
+    const info = exerciseInfo(ex.name);
+    const cat = info ? info.category : null;
+    if (cat && (!lastTrained[cat] || new Date(s.date) > new Date(lastTrained[cat]))) {
+      lastTrained[cat] = s.date;
+    }
+  }));
+  const freshness = CATEGORIES.map(c => ({
+    cat: c,
+    days: lastTrained[c] ? daysBetween(lastTrained[c], todayStr()) : Infinity
+  })).sort((a,b) => b.days - a.days);
+
+  const flist = document.getElementById('freshnessList');
+  flist.innerHTML = freshness.map(f => {
+    const label = f.days === Infinity ? 'never trained' : (f.days + (f.days===1?' day ago':' days ago'));
+    const badgeClass = f.days === Infinity || f.days >= 5 ? 'warn' : (f.days <= 2 ? 'good' : 'accent');
+    return `<div class="flex-between" style="padding:6px 0; border-bottom:1px dashed var(--border);">
+      <span>${f.cat}</span><span class="badge ${badgeClass}">${label}</span>
+    </div>`;
+  }).join('');
+
+  // recommendation
+  const pool = EXERCISES.filter(e => DATA.phase === 'calibration' ? !e.paused : true);
+  const staleCats = freshness.slice(0, 3).map(f => f.cat);
+  const picks = [];
+  staleCats.forEach(cat => {
+    const compound = pool.find(e => e.category === cat && e.type === 'compound' && !picks.includes(e));
+    if (compound) picks.push(compound);
+  });
+  staleCats.forEach(cat => {
+    const accessory = pool.find(e => e.category === cat && e.type === 'accessory' && !picks.includes(e));
+    if (accessory && picks.length < 5) picks.push(accessory);
+  });
+  const backcarePicks = pool.filter(e => e.type === 'backcare').slice(0,2);
+
+  const rpeTarget = DATA.phase === 'calibration' ? 'RPE 6–7' : 'RPE 7–8 (accessories) / 8–9 (main compounds)';
+  document.getElementById('recommendation').innerHTML = `
+    <div class="small-muted" style="margin-bottom:8px;">Built from your stalest muscle groups (${staleCats.join(', ')}) at ${rpeTarget}.</div>
+    ${picks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge accent">${e.category}</span></div>
+      <div class="small-muted">3 sets × 8–12 reps${e.type==='compound' ? ', last set to target RPE' : ''}</div></div>`).join('')}
+    <h3>Finish with back-care</h3>
+    ${backcarePicks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge core">Core</span></div>
+      <div class="small-muted">2 sets × 8–10 reps or 20–30s holds per side</div></div>`).join('')}
+  `;
+}
+
+/* ================= LOG SESSION TAB ================= */
+let exRowCount = 0;
+function addExRow(prefill) {
+  const wrap = document.getElementById('exRows');
+  const id = 'row' + (exRowCount++);
+  const div = document.createElement('div');
+  div.className = 'exrow';
+  div.dataset.rowId = id;
+  div.innerHTML = `
+    <div class="field" style="margin:0;"><label>Exercise</label>
+      <select class="ex-name">
+        <option value="">Select...</option>
+        ${allExerciseNames().map(n=>`<option value="${n}">${n}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" style="margin:0;"><label>Sets</label><input type="number" class="ex-sets" min="1" value="3"></div>
+    <div class="field" style="margin:0;"><label>Reps</label><input type="number" class="ex-reps" min="1" value="10"></div>
+    <div class="field" style="margin:0;"><label>Weight</label><input type="number" class="ex-weight" step="0.5" placeholder="lb"></div>
+    <div class="field" style="margin:0;"><label>RPE</label><input type="number" class="ex-rpe" min="1" max="10" step="0.5"></div>
+    <div class="field" style="margin:0;"><label>Notes</label><input type="text" class="ex-notes"></div>
+    <button class="btn secondary small" type="button" onclick="this.closest('.exrow').remove()">✕</button>
+  `;
+  wrap.appendChild(div);
+}
+document.getElementById('addRowBtn').addEventListener('click', () => addExRow());
+document.getElementById('logDate').value = todayStr();
+
+document.getElementById('saveSessionBtn').addEventListener('click', () => {
+  const date = document.getElementById('logDate').value || todayStr();
+  const name = document.getElementById('logName').value.trim() || 'Training session';
+  const notes = document.getElementById('logNotes').value.trim();
+  const rows = Array.from(document.querySelectorAll('#exRows .exrow'));
+  const exercises = rows.map(r => ({
+    name: r.querySelector('.ex-name').value,
+    sets: r.querySelector('.ex-sets').value,
+    reps: r.querySelector('.ex-reps').value,
+    weight: r.querySelector('.ex-weight').value,
+    rpe: r.querySelector('.ex-rpe').value,
+    notes: r.querySelector('.ex-notes').value.trim(),
+  })).filter(e => e.name);
+
+  if (!exercises.length) { toast('Add at least one exercise'); return; }
+
+  DATA.sessions.push({ id: Date.now(), date, name, notes, exercises });
+  saveData();
+  toast('Session saved');
+
+  document.getElementById('logName').value = '';
+  document.getElementById('logNotes').value = '';
+  document.getElementById('exRows').innerHTML = '';
+  addExRow();
+
+  renderToday(); renderRecentSessions(); renderProgressExerciseOptions();
+});
+
+function renderRecentSessions() {
+  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  const box = document.getElementById('recentSessions');
+  if (!sessions.length) { box.innerHTML = '<div class="empty">No sessions logged yet.</div>'; return; }
+  box.innerHTML = sessions.slice(0, 8).map(s => `
+    <div class="exercise-card">
+      <div class="title-row"><strong>${fmtDate(s.date)} — ${s.name}</strong>
+        <button class="btn secondary small" onclick="deleteSession(${s.id})">Delete</button></div>
+      <table><thead><tr><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>RPE</th><th>Notes</th></tr></thead>
+      <tbody>${s.exercises.map(e=>`<tr><td>${e.name}</td><td>${e.sets}×${e.reps}</td><td>${e.weight||'—'}</td><td>${e.rpe||'—'}</td><td>${e.notes||''}</td></tr>`).join('')}</tbody></table>
+      ${s.notes ? `<div class="small-muted" style="margin-top:6px;">Notes: ${s.notes}</div>` : ''}
+    </div>
+  `).join('');
+}
+function deleteSession(id) {
+  DATA.sessions = DATA.sessions.filter(s => s.id !== id);
+  saveData(); renderToday(); renderRecentSessions(); renderProgressExerciseOptions(); renderProgressTab();
+  toast('Session deleted');
+}
+
+/* ================= PROGRESS TAB ================= */
+let progressChartInstance = null;
+function renderProgressExerciseOptions() {
+  const sel = document.getElementById('progressExercise');
+  const loggedNames = [...new Set(DATA.sessions.flatMap(s => s.exercises.map(e=>e.name)))];
+  const current = sel.value;
+  sel.innerHTML = loggedNames.length
+    ? loggedNames.map(n=>`<option value="${n}">${n}</option>`).join('')
+    : `<option value="">No exercises logged yet</option>`;
+  if (loggedNames.includes(current)) sel.value = current;
+}
+document.getElementById('progressExercise').addEventListener('change', renderProgressChart);
+
+function renderProgressTab() {
+  renderProgressExerciseOptions();
+  renderProgressChart();
+  renderFullLogTable();
+}
+function renderProgressChart() {
+  const name = document.getElementById('progressExercise').value;
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  const entries = DATA.sessions
+    .filter(s => s.exercises.some(e=>e.name===name))
+    .map(s => ({ date: s.date, ex: s.exercises.find(e=>e.name===name) }))
+    .sort((a,b)=> new Date(a.date)-new Date(b.date));
+
+  if (progressChartInstance) progressChartInstance.destroy();
+  if (!entries.length) {
+    document.getElementById('progressSuggestion').innerHTML = '';
+    return;
+  }
+  progressChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: entries.map(e=>fmtDate(e.date)),
+      datasets: [{
+        label: name + ' — weight',
+        data: entries.map(e=>parseFloat(e.ex.weight)||0),
+        borderColor: '#B5501C', backgroundColor: '#B5501C', tension: .2,
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:false } } }
+  });
+
+  // progression suggestion: last 2 sessions at RPE <= 7
+  const last2 = entries.slice(-2);
+  const box = document.getElementById('progressSuggestion');
+  if (last2.length === 2 && last2.every(e => parseFloat(e.ex.rpe) && parseFloat(e.ex.rpe) <= 7)) {
+    const info = exerciseInfo(name);
+    const isLower = info && ['Legs'].includes(info.category);
+    const bump = isLower ? '+5 kg (~10 lb)' : '+2.5 kg (~5 lb)';
+    box.innerHTML = `<span class="badge good">Ready to progress</span> Last 2 sessions were both ≤ RPE 7 — try ${bump} next time.`;
+  } else {
+    box.innerHTML = `<span class="small-muted">Log 2 consecutive sessions at target RPE to get a progression call here.</span>`;
+  }
+}
+function renderFullLogTable() {
+  const rows = [];
+  DATA.sessions.slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).forEach(s => {
+    s.exercises.forEach(e => rows.push({ date: s.date, session: s.name, ...e }));
+  });
+  const box = document.getElementById('fullLogTable');
+  if (!rows.length) { box.innerHTML = '<div class="empty">Nothing logged yet — head to "Log Session" to get started.</div>'; return; }
+  box.innerHTML = `<table><thead><tr><th>Date</th><th>Session</th><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>RPE</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${r.session}</td><td>${r.name}</td><td>${r.sets}×${r.reps}</td><td>${r.weight||'—'}</td><td>${r.rpe||'—'}</td></tr>`).join('')}</tbody></table>`;
+}
+
+/* ================= LIBRARY TAB ================= */
+let activeCategory = 'All';
+function renderCategoryFilter() {
+  const box = document.getElementById('categoryFilter');
+  const cats = ['All', ...CATEGORIES];
+  box.innerHTML = cats.map(c => `<button class="pill ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`).join('');
+  box.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => {
+    activeCategory = p.dataset.cat; renderCategoryFilter(); renderLibrary();
+  }));
+}
+document.getElementById('librarySearch').addEventListener('input', renderLibrary);
+function renderLibrary() {
+  const q = document.getElementById('librarySearch').value.toLowerCase();
+  const list = EXERCISES.filter(e =>
+    (activeCategory==='All' || e.category===activeCategory) &&
+    e.name.toLowerCase().includes(q)
+  );
+  document.getElementById('libraryList').innerHTML = list.map(e => `
+    <div class="exercise-card">
+      <div class="title-row">
+        <strong>${e.name}</strong>
+        <span>
+          <span class="badge accent">${e.category}</span>
+          ${e.paused ? '<span class="badge warn">Paused this phase</span>' : ''}
+          ${e.backCare ? '<span class="badge core">Back-care</span>' : ''}
+        </span>
+      </div>
+      <h3 style="margin-top:8px;">Form cues</h3>
+      <ul>${e.cues.map(c=>`<li>${c}</li>`).join('')}</ul>
+      <h3 class="mistakes">Common mistakes</h3>
+      <ul class="mistakes">${e.mistakes.map(m=>`<li>${m}</li>`).join('')}</ul>
+    </div>
+  `).join('') || '<div class="empty">No exercises match.</div>';
+}
+
+/* ================= BACK CARE TAB ================= */
+function renderBackCare() {
+  const routine = EXERCISES.filter(e => e.type === 'backcare');
+  document.getElementById('backCareRoutine').innerHTML = routine.map(e => `
+    <div class="exercise-card">
+      <div class="title-row"><strong>${e.name}</strong><span class="badge core">2 sets × 8–10 reps / 20–30s per side</span></div>
+      <ul>${e.cues.map(c=>`<li>${c}</li>`).join('')}</ul>
+    </div>
+  `).join('') + `<div class="sources">Based on Dr. Stuart McGill's "Big 3" protocol (bird dog, side plank, modified curl-up) plus dead bug and Pallof press for anti-rotation core control. Sources:
+    <a href="https://www.backfitpro.com/mastering-the-mcgill-big-three-progressions-variations-and-common-pitfalls/" target="_blank">BackFitPro</a>,
+    <a href="https://squatuniversity.com/2018/06/21/the-mcgill-big-3-for-core-stability/" target="_blank">Squat University</a>,
+    <a href="https://www.garagegymreviews.com/lower-back-exercises" target="_blank">Garage Gym Reviews</a>,
+    <a href="https://barbend.com/pallof-press-variations/" target="_blank">BarBend</a>.
+  </div>`;
+
+  const tips = [
+    'Half-kneel to pick kids up off the floor: step one foot forward, drop the other knee down, scoop them in close, then stand — instead of bending straight over at the waist.',
+    'Keep the kid (or anything heavy) close to your body as you lift and carry — the further the load is from your spine, the more torque your lower back absorbs.',
+    'Avoid twisting while holding a kid — turn your feet, not just your torso, if you need to change direction.',
+    'Alternate which hip you carry on — a habitual one-sided carry builds asymmetry that feeds right into your existing tightness.',
+    'Brace gently (a soft belly-button-to-spine draw) before lifting, the same cue you use before a deadlift or squat.',
+    'A structured carrier that distributes weight across shoulders/hips beats one-arm hip-carrying for longer stretches (park, errands, etc.).',
+  ];
+  document.getElementById('parentingTips').innerHTML = tips.map(t=>`<li>${t}</li>`).join('');
+  document.getElementById('parentingSources').innerHTML = `Sources:
+    <a href="https://www.thejoint.com/blog/wellness/prevent-back-pain-lifting-kids" target="_blank">The Joint Chiropractic</a>,
+    <a href="https://www.willowbrookchiropractic.com/blog/how-to-lift-your-kids-without-hurting-your-back" target="_blank">Willowbrook Chiropractic</a>,
+    <a href="https://www.doclizzie.com/blog/5-safe-lifting-techniques-for-parents-to-protect-your-core-and-back" target="_blank">Doc Lizzie</a>.`;
+}
+
+/* ================= DATA / BACKUP TAB ================= */
+function renderDataTab() {
+  // Claude-formatted log
+  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const claudeText = sessions.map(s => {
+    const header = `[${s.date}] — ${s.name}`;
+    const rows = s.exercises.map(e => `${e.name} | ${e.sets}x${e.reps} | ${e.weight||'-'} | ${e.rpe||'-'} | ${e.notes||''}`).join('\n');
+    return `${header}\n${rows}\n---\nSession notes: ${s.notes||'—'}`;
+  }).join('\n\n');
+  document.getElementById('claudeFormatOut').value = claudeText || 'No sessions logged yet.';
+
+  document.getElementById('backupOut').value = JSON.stringify(DATA, null, 2);
+}
+document.getElementById('copyClaudeBtn').addEventListener('click', () => {
+  document.getElementById('claudeFormatOut').select();
+  navigator.clipboard.writeText(document.getElementById('claudeFormatOut').value).then(()=>toast('Copied — paste into a Claude chat'));
+});
+document.getElementById('copyBackupBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('backupOut').value).then(()=>toast('Backup copied'));
+});
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  const raw = document.getElementById('restoreIn').value.trim();
+  if (!raw) { toast('Paste a backup first'); return; }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed.sessions) throw new Error('bad shape');
+    DATA = parsed; saveData();
+    phaseSelect.value = DATA.phase || 'calibration';
+    renderAll();
+    toast('Restored');
+  } catch(e) { toast('That didn\'t look like a valid backup'); }
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('Erase all logged sessions? This cannot be undone (unless you have a backup).')) return;
+  DATA = cloneDefault(); saveData(); phaseSelect.value = DATA.phase;
+  renderAll();
+  toast('All data reset');
+});
+
+/* ================= INIT ================= */
+function renderAll() {
+  renderToday();
+  renderRecentSessions();
+  renderCategoryFilter();
+  renderLibrary();
+  renderBackCare();
+  renderProgressExerciseOptions();
+  if (!document.getElementById('exRows').children.length) addExRow();
+}
+renderAll();
+</script>
+</body>
+</html>
