@@ -158,6 +158,7 @@
         <div class="stat"><div class="num" id="statLast">—</div><div class="lbl">Last session</div></div>
         <div class="stat"><div class="num" id="statStreak">0</div><div class="lbl">Days since last back-care</div></div>
       </div>
+      <div id="painTrend" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
@@ -189,6 +190,28 @@
 
   <!-- PROGRAM -->
   <div class="panel" id="panel-program">
+    <div class="card">
+      <h2>Ramping up safely with back pain</h2>
+      <div class="note-box">
+        Change one variable at a time — load, volume, or complexity, not all three. Concretely: start at roughly
+        half the prescribed sets and a lower RPE (4–6) than the program calls for, favor bodyweight/band options
+        over loaded ones in your first sessions back, and only add load or volume in small steps (~10% or less)
+        once you've had two pain-free sessions in a row at the current level. Avoid loading the spine into flexion
+        (rounded-back lifts, weighted sit-ups) — build stability with the Big 3 (bird dog, side plank, dead bug)
+        instead. Deload every 3–5 weeks even if things feel good. Stop immediately on sharp, radiating, or
+        worsening pain rather than pushing through — that's a signal to back off and check with a doctor or PT,
+        not a target to grind past.
+      </div>
+      <div class="sources">Sources:
+        <a href="https://www.puregym.com/blog/strength-training-lower-back-pain/" target="_blank">PureGym</a>,
+        <a href="https://www.chelmsfordphysio.co.uk/returning-to-the-gym-after-an-episode-of-back-pain" target="_blank">Chelmsford Physio</a>,
+        <a href="https://www.backfitpro.com/designing-back-exercise-from-rehabilitation-to-enhancing-performance/" target="_blank">BackFitPro (McGill)</a>,
+        <a href="https://www.foundationalrehab.com/blog/mcgill-big-3-complete-guide" target="_blank">Foundational Rehab</a>,
+        <a href="https://www.trainingpeaks.com/blog/a-new-approach-to-the-10-percent-rule/" target="_blank">TrainingPeaks</a>,
+        <a href="https://pliability.com/stories/deloading-week" target="_blank">Pliability</a>.
+      </div>
+    </div>
+
     <div class="card">
       <h2>12-week program</h2>
       <div class="grid2">
@@ -225,9 +248,15 @@
       <h3>Exercises</h3>
       <div id="exRows"></div>
       <button class="btn secondary small" id="addRowBtn" type="button">+ Add exercise</button>
-      <div class="field" style="margin-top:12px;">
-        <label>Session notes</label>
-        <textarea id="logNotes" placeholder="Energy, how it felt, anything to flag..."></textarea>
+      <div class="grid2" style="margin-top:12px;">
+        <div class="field">
+          <label>Back pain today (0 = none, 10 = severe)</label>
+          <input type="number" id="logPain" min="0" max="10" step="1" placeholder="e.g. 2">
+        </div>
+        <div class="field">
+          <label>Session notes</label>
+          <textarea id="logNotes" placeholder="Energy, how it felt, anything to flag..."></textarea>
+        </div>
       </div>
       <button class="btn" id="saveSessionBtn" type="button">Save session</button>
     </div>
@@ -328,9 +357,15 @@ const STORAGE_KEY = 'martin_dashboard_v1';
 const PHASES = {
   calibration: {
     label: 'Return-to-training calibration',
-    note: `<strong>Calibration week mode.</strong> Programming avoids heavy barbell OHP and conventional deadlifts —
-      favoring dumbbell/machine variations while your shoulder and back settle in. Everything targets RPE 6–7.
-      Once you've logged a few solid sessions pain-free, switch the phase dropdown to "Normal progressive programming."`,
+    note: `<strong>Calibration / ramp-up mode.</strong> Programming avoids heavy barbell OHP and conventional deadlifts —
+      favoring dumbbell/machine variations while your back settles in. Given the back pain, ramp up more conservatively
+      than the program's default: start with roughly <strong>half the prescribed sets</strong> (2 instead of 4) at
+      <strong>RPE 4–6, not 6–7</strong>, and pick the bodyweight/band option in a superset over the loaded one for your
+      first sessions back. Log your back pain (0–10) every session — if it's trending up, hold this week's load rather
+      than progressing. Only increase load or sets by small increments (~10% or less) once two sessions in a row are
+      pain-free at the current level. Stop immediately on sharp, radiating, or worsening pain and check with a doctor
+      or PT rather than pushing through it. Once you've logged several pain-free sessions, switch this dropdown to
+      "Normal progressive programming."`,
   },
   normal: {
     label: 'Normal progressive programming',
@@ -638,7 +673,7 @@ phaseSelect.addEventListener('change', () => {
 function renderToday() {
   document.getElementById('phaseNote').innerHTML = `<h2>${PHASES[DATA.phase].label}</h2><div class="note-box" style="margin-bottom:0;">${PHASES[DATA.phase].note}</div>`;
 
-  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  const sessions = DATA.sessions.slice().sort((a,b)=> (new Date(b.date) - new Date(a.date)) || ((b.id||0) - (a.id||0)));
   document.getElementById('statSessions').textContent = sessions.length;
   document.getElementById('statLast').textContent = sessions.length ? fmtDate(sessions[0].date) : '—';
 
@@ -651,6 +686,24 @@ function renderToday() {
     }
   }));
   document.getElementById('statStreak').textContent = lastBackcare ? daysBetween(lastBackcare, todayStr()) : '—';
+
+  // back pain trend (last 3 logged sessions with a pain rating)
+  const painSessions = sessions.filter(s => s.pain != null).slice(0, 3); // most recent first
+  const painBox = document.getElementById('painTrend');
+  if (painSessions.length === 0) {
+    painBox.innerHTML = '';
+  } else {
+    const latest = painSessions[0].pain;
+    const oldest = painSessions[painSessions.length - 1].pain;
+    const trendPills = painSessions.slice().reverse().map(s => `<span class="badge ${s.pain>=6?'warn':s.pain>=3?'accent':'good'}">${s.pain}</span>`).join(' → ');
+    let flag = '';
+    if (painSessions.length >= 2) {
+      if (latest > oldest) flag = `<div class="note-box" style="margin-top:8px; margin-bottom:0;"><strong>Pain trending up.</strong> Hold this week's load/sets rather than progressing — repeat or lighten the last session, and consider an extra rest or back-care-only day.</div>`;
+      else if (latest < oldest) flag = `<div class="small-muted" style="margin-top:6px;">Trending down — safe to continue as planned, still progress conservatively.</div>`;
+      else flag = `<div class="small-muted" style="margin-top:6px;">Holding steady.</div>`;
+    }
+    painBox.innerHTML = `<div class="small-muted">Back pain trend (most recent sessions): ${trendPills}</div>${flag}`;
+  }
 
   // freshness per category
   const lastTrained = {};
@@ -753,6 +806,8 @@ document.getElementById('saveSessionBtn').addEventListener('click', () => {
   const date = document.getElementById('logDate').value || todayStr();
   const name = document.getElementById('logName').value.trim() || 'Training session';
   const notes = document.getElementById('logNotes').value.trim();
+  const painRaw = document.getElementById('logPain').value;
+  const pain = painRaw === '' ? null : Math.max(0, Math.min(10, parseInt(painRaw, 10)));
   const rows = Array.from(document.querySelectorAll('#exRows .exrow'));
   const exercises = rows.map(r => ({
     name: r.querySelector('.ex-name').value,
@@ -765,12 +820,13 @@ document.getElementById('saveSessionBtn').addEventListener('click', () => {
 
   if (!exercises.length) { toast('Add at least one exercise'); return; }
 
-  DATA.sessions.push({ id: Date.now(), date, name, notes, exercises });
+  DATA.sessions.push({ id: Date.now(), date, name, notes, pain, exercises });
   saveData();
   toast('Session saved');
 
   document.getElementById('logName').value = '';
   document.getElementById('logNotes').value = '';
+  document.getElementById('logPain').value = '';
   document.getElementById('exRows').innerHTML = '';
   addExRow();
 
@@ -778,13 +834,16 @@ document.getElementById('saveSessionBtn').addEventListener('click', () => {
 });
 
 function renderRecentSessions() {
-  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(b.date) - new Date(a.date));
+  const sessions = DATA.sessions.slice().sort((a,b)=> (new Date(b.date) - new Date(a.date)) || ((b.id||0) - (a.id||0)));
   const box = document.getElementById('recentSessions');
   if (!sessions.length) { box.innerHTML = '<div class="empty">No sessions logged yet.</div>'; return; }
   box.innerHTML = sessions.slice(0, 8).map(s => `
     <div class="exercise-card">
       <div class="title-row"><strong>${fmtDate(s.date)} — ${s.name}</strong>
-        <button class="btn secondary small" onclick="deleteSession(${s.id})">Delete</button></div>
+        <span>
+          ${s.pain!=null ? `<span class="badge ${s.pain>=6?'warn':s.pain>=3?'accent':'good'}">Pain ${s.pain}/10</span>` : ''}
+          <button class="btn secondary small" onclick="deleteSession(${s.id})">Delete</button>
+        </span></div>
       <table><thead><tr><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>RPE</th><th>Notes</th></tr></thead>
       <tbody>${s.exercises.map(e=>`<tr><td>${e.name}</td><td>${e.sets}×${e.reps}</td><td>${e.weight||'—'}</td><td>${e.rpe||'—'}</td><td>${e.notes||''}</td></tr>`).join('')}</tbody></table>
       ${s.notes ? `<div class="small-muted" style="margin-top:6px;">Notes: ${s.notes}</div>` : ''}
@@ -821,7 +880,7 @@ function renderProgressChart() {
   const entries = DATA.sessions
     .filter(s => s.exercises.some(e=>e.name===name))
     .map(s => ({ date: s.date, ex: s.exercises.find(e=>e.name===name) }))
-    .sort((a,b)=> new Date(a.date)-new Date(b.date));
+    .sort((a,b)=> (new Date(a.date)-new Date(b.date)) || ((a.id||0)-(b.id||0)));
 
   if (progressChartInstance) progressChartInstance.destroy();
   if (!entries.length) {
@@ -855,7 +914,7 @@ function renderProgressChart() {
 }
 function renderFullLogTable() {
   const rows = [];
-  DATA.sessions.slice().sort((a,b)=> new Date(b.date)-new Date(a.date)).forEach(s => {
+  DATA.sessions.slice().sort((a,b)=> (new Date(b.date)-new Date(a.date)) || ((b.id||0)-(a.id||0))).forEach(s => {
     s.exercises.forEach(e => rows.push({ date: s.date, session: s.name, ...e }));
   });
   const box = document.getElementById('fullLogTable');
@@ -1030,11 +1089,11 @@ function renderBackCare() {
 /* ================= DATA / BACKUP TAB ================= */
 function renderDataTab() {
   // Claude-formatted log
-  const sessions = DATA.sessions.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const sessions = DATA.sessions.slice().sort((a,b)=> (new Date(a.date)-new Date(b.date)) || ((a.id||0)-(b.id||0)));
   const claudeText = sessions.map(s => {
     const header = `[${s.date}] — ${s.name}`;
     const rows = s.exercises.map(e => `${e.name} | ${e.sets}x${e.reps} | ${e.weight||'-'} | ${e.rpe||'-'} | ${e.notes||''}`).join('\n');
-    return `${header}\n${rows}\n---\nSession notes: ${s.notes||'—'}`;
+    return `${header}\n${rows}\n---\nBack pain: ${s.pain!=null ? s.pain+'/10' : '—'}\nSession notes: ${s.notes||'—'}`;
   }).join('\n\n');
   document.getElementById('claudeFormatOut').value = claudeText || 'No sessions logged yet.';
 
