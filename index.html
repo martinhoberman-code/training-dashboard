@@ -131,7 +131,7 @@
       <div class="sub">RPE-based programming · updated as you log sessions</div>
     </div>
     <div class="field" style="width:220px; margin:0;">
-      <label>Program phase</label>
+      <label>Training phase (shoulder/back status)</label>
       <select id="phaseSelect"></select>
     </div>
   </header>
@@ -139,6 +139,7 @@
   <nav class="tabs" id="tabs">
     <button data-tab="today" class="active">Today</button>
     <button data-tab="warmup">Warmup</button>
+    <button data-tab="program">Program</button>
     <button data-tab="log">Log Session</button>
     <button data-tab="progress">Progress</button>
     <button data-tab="library">Exercise Library</button>
@@ -183,6 +184,33 @@
       </div>
       <div id="warmupRoutine"></div>
       <div class="sources" id="warmupSources"></div>
+    </div>
+  </div>
+
+  <!-- PROGRAM -->
+  <div class="panel" id="panel-program">
+    <div class="card">
+      <h2>12-week program</h2>
+      <div class="grid2">
+        <div class="field"><label>Program start date</label><input type="date" id="programStartDate"></div>
+        <div class="field">
+          <label>Status</label>
+          <div id="programStatus" style="padding:7px 0; font-weight:600;"></div>
+        </div>
+      </div>
+      <label style="margin-top:6px;">Which day are you doing next?</label>
+      <div class="pill-row" id="dayPicker"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="programDayTitle">Today's prescription</h2>
+      <div id="programDay"></div>
+      <button class="btn small" id="logProgramBtn" type="button" style="margin-top:6px;">Log this session</button>
+    </div>
+
+    <div class="card">
+      <h2>Full 12-week overview</h2>
+      <div id="programOverview"></div>
     </div>
   </div>
 
@@ -403,11 +431,11 @@ const WARMUP = [
   { phase: 'Mobilize', name: 'Cat / Cow', dose: '8–10 breaths',
     cues: ['Inhale as you arch (cow), exhale as you round (cat)', 'Move slowly through your full spine, not just the lower back'] },
   { phase: 'Mobilize', name: 'Bird Dog', dose: '10 each side, slow & controlled',
-    cues: ['Opposite arm and leg extend together, hips stay level', 'Same movement as your back-care work — this doubles as spine prep'] },
+    cues: ['Tabletop position, wrists under shoulders, knees under hips', 'Extend opposite arm and leg together, hips square, hold with control', 'Avoid arching the low back or rotating the hips', 'Cue: imagine balancing a glass of water on your back', 'Same movement as your back-care work — this doubles as spine prep'] },
   { phase: 'Mobilize', name: "World's Greatest Stretch", dose: '5–6 each side',
-    cues: ['Lunge forward, drop the back elbow to the instep, then rotate that arm up toward the ceiling', 'Hits hips, hamstrings, thoracic spine, and shoulders in one move'] },
+    cues: ['From a push-up position, step one foot outside the same-side hand', 'Drop that elbow toward the floor, then rotate and reach the arm up toward the ceiling', 'Move slow and breathe into the stretch — don\'t rush it', 'Hits hips, hamstrings, thoracic spine, and shoulders in one move'] },
   { phase: 'Mobilize', name: 'Scapular Push-Ups', dose: '10 reps',
-    cues: ['Stay in a plank, keep arms straight, let shoulder blades protract/retract', 'Small range of motion — the movement is in the shoulder blades, not the elbows'] },
+    cues: ['Hold a plank position, arms straight', 'Pinch shoulder blades together, then push the floor away to spread them apart', 'Only the shoulder blades move — elbows stay locked, not bending'] },
   { phase: 'Mobilize', name: 'Leg Kicks (lying flat)', dose: '10 each side',
     cues: ['Keep the opposite leg pinned to the floor', 'Controlled kick, not a bounce'] },
   { phase: 'Mobilize', name: 'Tabletop Knee Circles', dose: '5 forward + 5 back, each side',
@@ -415,10 +443,137 @@ const WARMUP = [
   { phase: 'Potentiate', name: 'Bodyweight Squats', dose: '15 reps',
     cues: ['Full range, controlled — this primes the exact pattern you\'ll load next'] },
   { phase: 'Potentiate', name: 'Push-Ups', dose: '10 reps',
-    cues: ['Primes chest/shoulders/triceps for pressing work'] },
+    cues: ['Hands under shoulders, core braced, body in a straight line', 'Lower chest to the floor, press back up to full lockout', 'Watch for hips sagging or elbows flaring — screw your hands into the floor to keep shoulders stable', 'Primes chest/shoulders/triceps for the pressing work ahead'] },
 ];
 
-const DEFAULT_DATA = { phase: 'calibration', sessions: [] };
+/* Full 12-week phased program, transcribed from Martin's program doc. */
+function EX(n, sr, eq, c, alt) { return { n, sr, eq, c, alt: alt || null }; }
+const PROGRAM = [
+  { name: 'Phase 1', weeks: [1,4], days: [
+    { label: 'Day 1 — Lower Body', supersets: [
+      [ EX('Split Squat','4 sets (15,12,10,10)','DB 25–35 lbs','Keep chest tall, slight forward lean at hips, press through front heel.'),
+        EX('Dead Bug','4×15 ES','Bodyweight','Low back pressed to floor, exhale as leg lowers.'),
+        EX('Hamstring Walkouts','4×10','Bodyweight','Stand feet hip-width → reach for toes → walk hands forward to push-up → walk back → stand tall. Keep legs straight.',
+          EX('Bird Dog Holds','5×10s ES','Bodyweight','Brace core, hips square, extend slowly, avoid arching.')) ],
+      [ EX('Side Lunge','4×10 ES','DB 25–35 lbs','Step wide, sit hips back, keep trailing leg straight.'),
+        EX('Band-Resisted Twist','4×10 ES','Band, medium','Rotate from core, not arms. Control band tension.'),
+        EX('Plank (elbows)','4×45s','Bodyweight','Push forearms down, ribs tucked, hips level.'),
+        EX('Side Plank w/ Reach-Through','3×20s ES','Bodyweight','Stack shoulders/hips, thread arm under, then rotate open.') ],
+      [ EX('Single-Leg Hip Bridge','4×10 ES','Bodyweight','Drive through heel, keep hips level, avoid arching.',
+          EX('Single-Leg RDL','4×8 ES','DB 25–35 lbs','Soft knee, hinge at hips, keep back flat, hips square.')),
+        EX('Leg Drops','4×15','Bodyweight','Low back pressed to floor, control descent.'),
+        EX('Seated Leg Lifts','4×10','Bodyweight','Sit tall, core tight, lift with control.',
+          EX('Hip Thrusts','4×12','DB 40–45 lbs','Chin tucked, ribs down, squeeze glutes at top.')) ],
+    ]},
+    { label: 'Day 2 — Upper Body', supersets: [
+      [ EX('Push-Up','4 sets (15,12,10,10)','Bodyweight','Hands under shoulders, core braced, chest touches floor.'),
+        EX('Single-Arm DB Row','4×10 ES','DB 35–45 lbs','Brace free hand, pull to hip, control 3s eccentric.'),
+        EX('Push-Up Position Shoulder Taps','4×30 (15 ES)','Bodyweight','Keep hips square, minimize rocking.') ],
+      [ EX('DB Front Raise','4×12','DB 10–15 lbs','Slight elbow bend, raise to shoulder height only.'),
+        EX('Band Pull-Aparts','4×20','Band, light–medium','Pull apart at chest height, control return.',
+          EX('Face Pulls','3×12–15','Band, medium','Pull to forehead, squeeze upper back, elbows high.')),
+        EX('Hip Bridge March','4×60s','Bodyweight','Hips lifted, alternate legs without sagging.',
+          EX('Hip Thrusts','4×12','DB 40–45 lbs','Chin tucked, ribs down, pause/squeeze at top.')) ],
+      [ EX('Upright Row','4×10','DB 20–30 lbs or Barbell','Keep DBs close, elbows lead, don\'t pull higher than shoulders.'),
+        EX('Seated Overhead Shoulder Press','4×10','DB 25–35 lbs','Core tight, avoid low-back arch, full lockout overhead.'),
+        EX('Elbow Plank','4×60s','Bodyweight','Push forearms down, ribs tucked, hips level.'),
+        EX('Side Plank w/ Reach-Through (extra)','3×20s ES','Bodyweight','Stack shoulders/hips, thread arm under, rotate open.') ],
+    ]},
+    { label: 'Day 3 — Full Body', supersets: [
+      [ EX('Romanian Deadlift (1 DB)','4 sets (15,12,10,10)','DB 40–45 lbs or KB 20kg','Soft knees, hinge at hips, keep back flat, control 3s down.'),
+        EX('Pulldown','4×10','Band, medium–heavy','Pull elbows to ribs, avoid leaning back.'),
+        EX('Clamshell','4×15 ES','Bodyweight or mini-band','Hips stacked, knees apart, don\'t roll back.') ],
+      [ EX('Step-Up','4×10 ES','DB 25–35 lbs at sides','Drive through heel, torso upright, control lowering.'),
+        EX('Half-Kneel Press','4×10 ES','DB 20–25 lbs or medium band','Press with arm of downed knee, brace core, no twisting.'),
+        EX('Plank','4×45s','Bodyweight','Ribs tucked, squeeze glutes, avoid sagging.') ],
+      [ EX('Single-Leg Hip Bridge','4×15 ES','Bodyweight','Hips level, drive through heel.',
+          EX('Single-Leg RDL','4×8 ES','DB 25–35 lbs','Soft knee, hinge at hips, back flat, hips square.')),
+        EX('Band Rows','4×15','Band, medium','Pull to ribs, squeeze shoulder blades, slow release.'),
+        EX('Supermans','4×10','Bodyweight','Squeeze glutes/upper back, 3s hold, avoid over-arching.') ],
+    ]},
+  ]},
+  { name: 'Phase 2', weeks: [5,8], days: [
+    { label: 'Day 1 — Lower Body', supersets: [
+      [ EX('Goblet Squat','4 sets (15,12,10,10)','DB 40–55 lbs or KB','Hold DB close to chest, chest tall, sit hips back and down.'),
+        EX('Kneeling Twist','4×10 ES','DB 5–10 lbs','Half-kneel, rotate from ribs/shoulders (not low back).'),
+        EX('Hip 90/90s','4×5 ES','Bodyweight','Sit on floor, rotate knees side to side, keep chest tall.') ],
+      [ EX('Split Squat','4×12 ES','DB 25–35 lbs','Press through front heel, torso upright.'),
+        EX('Hamstring Walkouts','4×10','Bodyweight','Stand feet hip-width → reach to toes → walk hands forward to push-up → walk back.',
+          EX('Bird Dog Holds','5×10s ES','Bodyweight','Brace core, hips square, extend slowly, avoid arching.')),
+        EX('Elbow Plank','4×60s','Bodyweight','Push forearms down, ribs tucked, hips level.') ],
+      [ EX('Single-Leg Hip Bridge','4×10 ES','Bodyweight','Hips level, drive through heel.',
+          EX('Single-Leg RDL','4×8 ES','DB 25–35 lbs','Soft knee, hinge at hips, keep back flat.')),
+        EX('Leg Drops','4×15','Bodyweight','Low back pressed to floor, slow and controlled.'),
+        EX('Band Walk','60s × 3','Mini-band just above knees','Small steps, knees pushed out, hips low.') ],
+    ]},
+    { label: 'Day 2 — Upper Body', supersets: [
+      [ EX('Floor Press','4 sets (15,12,10,10)','DB 35–50 lbs','Elbows ~45° from ribs, press straight up, control down.'),
+        EX('Dumbbell Row','4×10 ES','DB 35–45 lbs','Brace with free hand, pull to hip, slow 3s lower.'),
+        EX('Kettlebell Swing','60s','KB 35–45 lbs','Hinge hips back, drive hips forward explosively, arms relaxed.') ],
+      [ EX('Push-Up','4×10','Bodyweight','Core tight, chest to floor, full lockout.'),
+        EX('Band Pull-Aparts','4×20','Band, light–medium','Pull apart at chest height, control return.',
+          EX('Face Pulls','3×12–15','Band, medium','Pull to forehead, elbows high, squeeze upper back.')),
+        EX('Hip Bridge March','4×60s','Bodyweight','Hips lifted, alternate legs without sagging.',
+          EX('Hip Thrusts','4×12','DB 40–50 lbs','Chin tucked, ribs down, pause/squeeze at top.')) ],
+      [ EX('Upright Row','4×10','DB 20–30 lbs or Barbell','Elbows lead, DBs close to body, stop at shoulder height.'),
+        EX('Seated Overhead Shoulder Press','4×10','DB 25–35 lbs','Core braced, avoid arching, full lockout overhead.'),
+        EX('Elbow Plank','4×60s','Bodyweight','Push forearms down, ribs tucked, hips level.'),
+        EX('Side Plank w/ Reach-Through (extra)','3×20s ES','Bodyweight','Stack shoulders/hips, thread arm under, rotate open.') ],
+    ]},
+    { label: 'Day 3 — Full Body', supersets: [
+      [ EX('80/20 Deadlift','4×12','DB 40–50 lbs or KB 20kg','80% weight on lead leg, 20% on back leg, hinge at hips.'),
+        EX('Alternating Arm Rows','4×10 ES','DB 30–40 lbs','One DB rowed at a time, core stable, back flat.'),
+        EX('Dead Bugs','4×10 ES','Bodyweight','Low back pressed into floor, exhale as you extend.') ],
+      [ EX('Sumo Squat','4×10','DB 40–55 lbs or KB','Wide stance, toes out, chest tall, knees track over toes.'),
+        EX('Half-Kneel Press','4×10 ES','DB 20–25 lbs or medium band','Press with arm of downed knee, brace core, no twisting.'),
+        EX('Elbow Plank','4×60s','Bodyweight','Ribs tucked, glutes squeezed, hips level.') ],
+      [ EX('Single-Leg Hip Bridge','4×15 ES','Bodyweight','Hips level, drive through heel.',
+          EX('Single-Leg RDL','4×8 ES','DB 25–35 lbs','Soft knee, hinge at hips, back flat, hips square.')),
+        EX('Band Rows','4×15','Band, medium','Pull to ribs, squeeze shoulder blades, slow release.'),
+        EX('Supermans','4×10 (3s hold)','Bodyweight','Squeeze glutes + upper back, avoid over-arching.') ],
+    ]},
+  ]},
+  { name: 'Phase 3', weeks: [9,12], days: [
+    { label: 'Day 1 — Lower Body', supersets: [
+      [ EX('Two DB Front Squat to Bench','4 sets (15,12,10,10)','DB 35–50 lbs each','Sit back to bench, chest tall, drive through heels to stand.'),
+        EX('Jump Squats','4×5','Bodyweight','Land softly, absorb with hips, keep chest tall.',
+          EX('KB Swings','3×20','KB 35–45 lbs','Explosive hip hinge, arms relaxed, snap hips forward.')),
+        EX('Dead Bugs','10 ES','Bodyweight','Low back pressed into floor, move slow, exhale as leg lowers.') ],
+      [ EX('Reverse Lunge','4×10 ES','DB 25–35 lbs','Step back long, torso upright, front heel down.'),
+        EX('Banded Twists','4×10 ES','Band, medium','Rotate with control, don\'t fling arms.',
+          EX('Pallof Press','4×10 ES','Band, medium','Press arms straight out, resist rotation.')),
+        EX('Elbow Plank','4×60s','Bodyweight','Ribs tucked, forearms pressed down, hips level.') ],
+      [ EX('Single-Leg Hip Bridge','4×10 ES','Bodyweight','Keep hips square, drive through heel.',
+          EX('Single-Leg RDL','4×8 ES','DB 25–35 lbs','Hinge at hips, soft knee, back flat, hips square.')),
+        EX('Leg Drops','4×15','Bodyweight','Low back pressed to floor, move slowly.'),
+        EX('Band Walk','4×60s','Mini-band above knees','Small steps, knees pressed out, hips low.') ],
+    ]},
+    { label: 'Day 2 — Upper Body', supersets: [
+      [ EX('Dumbbell Bench Press','4 sets (15,12,10,10)','DB 40–50 lbs','Elbows ~45°, press straight up, control descent.'),
+        EX('Dumbbell Row','4×10 ES','DB 35–45 lbs','Pull to hip, squeeze shoulder blade, control lower.') ],
+      [ EX('Push-Up','4×12','Bodyweight','Core tight, chest touches floor, full lockout.'),
+        EX('Band Pull-Aparts','4×20','Band, light–medium','Pull apart at chest height, control return.',
+          EX('Face Pulls','3×12–15','Band, medium','Pull to forehead, elbows high, squeeze upper back.')),
+        EX('Plank Position Shoulder Taps','4×60s','Bodyweight','Keep hips square, tap slow, minimize rocking.') ],
+      [ EX('Chest-Supported Row (incline bench)','4×12','DB 20–30 lbs','Lie chest-down on incline bench, row both DBs, squeeze at top.'),
+        EX('Seated Overhead Press','4×10','DB 25–35 lbs','Core braced, no arching, press to full lockout overhead.'),
+        EX('Plank','4×60s','Bodyweight','Ribs tucked, squeeze glutes, hips level.') ],
+    ]},
+    { label: 'Day 3 — Full Body', supersets: [
+      [ EX('Romanian Deadlift (Two DBs)','4 sets (15,12,10,10)','DB 40–50 lbs each','Soft knees, hinge at hips, back flat, 3s eccentric.'),
+        EX('Pulldown','4×10','Band, medium–heavy','Elbows to ribs, control return, no leaning back.'),
+        EX('Dead Bugs','4×10 ES','Bodyweight','Low back pressed to floor, slow and controlled.') ],
+      [ EX('Single-Leg Deadlift','4×10 ES','Bodyweight or DB 15–20 lbs','Soft knee, hinge at hips, back flat, hips square.'),
+        EX('Half-Kneel Press','4×10 ES','DB 20–25 lbs or medium band','Press with arm of downed knee, core braced, no twisting.'),
+        EX('Elbow Plank','4×60s','Bodyweight','Forearms pressed down, ribs tucked, hips level.') ],
+      [ EX('Step-Up','4×10 ES','DB 25–35 lbs at sides','Step tall, full foot on bench, drive through heel.'),
+        EX("T's/Y's",'4×8 of each','DB 5–10 lbs or light plates','For T\'s: raise arms to sides; for Y\'s: raise arms forward/angled up. Control movement.'),
+        EX('Push-Up Position DB Pull-Through','4×45s','DB 20–30 lbs','In push-up plank, drag DB under chest with opposite hand. Keep hips square.') ],
+    ]},
+  ]},
+];
+
+const DEFAULT_DATA = { phase: 'calibration', sessions: [], programStartDate: null, currentDayIndex: 0 };
 function cloneDefault() { return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
 function loadData() {
@@ -428,6 +583,8 @@ function loadData() {
     const parsed = JSON.parse(raw);
     if (!parsed.sessions) parsed.sessions = [];
     if (!parsed.phase) parsed.phase = 'calibration';
+    if (parsed.programStartDate === undefined) parsed.programStartDate = null;
+    if (parsed.currentDayIndex === undefined) parsed.currentDayIndex = 0;
     return parsed;
   } catch(e) { return cloneDefault(); }
 }
@@ -462,6 +619,7 @@ document.getElementById('tabs').addEventListener('click', (e) => {
   document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
   if (btn.dataset.tab === 'progress') renderProgressTab();
   if (btn.dataset.tab === 'data') renderDataTab();
+  if (btn.dataset.tab === 'program') renderProgram();
 });
 
 /* ================= PHASE ================= */
@@ -519,32 +677,49 @@ function renderToday() {
   }).join('');
 
   // recommendation
-  const pool = EXERCISES.filter(e => DATA.phase === 'calibration' ? !e.paused : true);
-  const staleCats = freshness.slice(0, 3).map(f => f.cat);
-  const picks = [];
-  staleCats.forEach(cat => {
-    const compound = pool.find(e => e.category === cat && e.type === 'compound' && !picks.includes(e));
-    if (compound) picks.push(compound);
-  });
-  staleCats.forEach(cat => {
-    const accessory = pool.find(e => e.category === cat && e.type === 'accessory' && !picks.includes(e));
-    if (accessory && picks.length < 5) picks.push(accessory);
-  });
-  const backcarePicks = pool.filter(e => e.type === 'backcare').slice(0,2);
-
-  const rpeTarget = DATA.phase === 'calibration' ? 'RPE 6–7' : 'RPE 7–8 (accessories) / 8–9 (main compounds)';
-  document.getElementById('recommendation').innerHTML = `
-    <div class="small-muted" style="margin-bottom:8px;">Built from your stalest muscle groups (${staleCats.join(', ')}) at ${rpeTarget}.</div>
+  const warmupCard = `
     <div class="exercise-card" style="background:var(--core-soft); border-color:var(--core);">
       <div class="title-row"><strong>Start with your warm-up</strong><span class="badge core">~8 min</span></div>
       <div class="small-muted">Raise → mobilize → potentiate — see the "Warmup" tab before you touch a weight.</div>
-    </div>
-    ${picks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge accent">${e.category}</span></div>
-      <div class="small-muted">3 sets × 8–12 reps${e.type==='compound' ? ', last set to target RPE' : ''}</div></div>`).join('')}
-    <h3>Finish with back-care</h3>
-    ${backcarePicks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge core">Core</span></div>
-      <div class="small-muted">2 sets × 8–10 reps or 20–30s holds per side</div></div>`).join('')}
-  `;
+    </div>`;
+
+  if (DATA.programStartDate) {
+    const week = getProgramWeek();
+    const phase = PROGRAM[getPhaseIndexForWeek(week)];
+    const day = phase.days[DATA.currentDayIndex] || phase.days[0];
+    const allSlots = day.supersets.flat();
+    document.getElementById('recommendation').innerHTML = `
+      <div class="small-muted" style="margin-bottom:8px;">Week ${week} of 12 — ${phase.name} · ${day.label}</div>
+      ${warmupCard}
+      ${allSlots.map(slot => `<div class="exercise-card"><div class="title-row"><strong>${slot.n}</strong><span class="badge accent">${slot.sr}</span></div>
+        <div class="small-muted">${slot.eq}</div></div>`).join('')}
+      <button class="btn small secondary" type="button" onclick="document.querySelector('[data-tab=program]').click()" style="margin-top:6px;">Full cues &amp; log this session →</button>
+    `;
+  } else {
+    const pool = EXERCISES.filter(e => DATA.phase === 'calibration' ? !e.paused : true);
+    const staleCats = freshness.slice(0, 3).map(f => f.cat);
+    const picks = [];
+    staleCats.forEach(cat => {
+      const compound = pool.find(e => e.category === cat && e.type === 'compound' && !picks.includes(e));
+      if (compound) picks.push(compound);
+    });
+    staleCats.forEach(cat => {
+      const accessory = pool.find(e => e.category === cat && e.type === 'accessory' && !picks.includes(e));
+      if (accessory && picks.length < 5) picks.push(accessory);
+    });
+    const backcarePicks = pool.filter(e => e.type === 'backcare').slice(0,2);
+    const rpeTarget = DATA.phase === 'calibration' ? 'RPE 6–7' : 'RPE 7–8 (accessories) / 8–9 (main compounds)';
+    document.getElementById('recommendation').innerHTML = `
+      <div class="note-box">Set a program start date on the <strong>Program</strong> tab to see your actual assigned 12-week session here instead of this generic pick.</div>
+      <div class="small-muted" style="margin-bottom:8px;">Built from your stalest muscle groups (${staleCats.join(', ')}) at ${rpeTarget}.</div>
+      ${warmupCard}
+      ${picks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge accent">${e.category}</span></div>
+        <div class="small-muted">3 sets × 8–12 reps${e.type==='compound' ? ', last set to target RPE' : ''}</div></div>`).join('')}
+      <h3>Finish with back-care</h3>
+      ${backcarePicks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge core">Core</span></div>
+        <div class="small-muted">2 sets × 8–10 reps or 20–30s holds per side</div></div>`).join('')}
+    `;
+  }
 }
 
 /* ================= LOG SESSION TAB ================= */
@@ -563,7 +738,7 @@ function addExRow(prefill) {
       </select>
     </div>
     <div class="field" style="margin:0;"><label>Sets</label><input type="number" class="ex-sets" min="1" value="3"></div>
-    <div class="field" style="margin:0;"><label>Reps</label><input type="number" class="ex-reps" min="1" value="10"></div>
+    <div class="field" style="margin:0;"><label>Reps</label><input type="text" class="ex-reps" placeholder="10, 10 ES, 45s..." value="10"></div>
     <div class="field" style="margin:0;"><label>Weight</label><input type="number" class="ex-weight" step="0.5" placeholder="lb"></div>
     <div class="field" style="margin:0;"><label>RPE</label><input type="number" class="ex-rpe" min="1" max="10" step="0.5"></div>
     <div class="field" style="margin:0;"><label>Notes</label><input type="text" class="ex-notes"></div>
@@ -724,6 +899,84 @@ function renderLibrary() {
   `).join('') || '<div class="empty">No exercises match.</div>';
 }
 
+/* ================= PROGRAM TAB ================= */
+function getProgramWeek() {
+  if (!DATA.programStartDate) return 1;
+  const d = daysBetween(DATA.programStartDate, todayStr());
+  return Math.min(12, Math.max(1, Math.floor(d / 7) + 1));
+}
+function getPhaseIndexForWeek(week) {
+  if (week <= 4) return 0;
+  if (week <= 8) return 1;
+  return 2;
+}
+function renderExSlot(slot) {
+  return `
+    <div class="exercise-card">
+      <div class="title-row"><strong>${slot.n}</strong><span class="badge accent">${slot.sr}</span></div>
+      <div class="small-muted">${slot.eq}</div>
+      <ul><li>${slot.c}</li></ul>
+      ${slot.alt ? `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);">
+        <span class="badge warn">🔄 Alternative</span>
+        <div style="margin-top:4px;"><strong>${slot.alt.n}</strong> — <span class="small-muted">${slot.alt.sr}, ${slot.alt.eq}</span></div>
+        <ul><li>${slot.alt.c}</li></ul>
+      </div>` : ''}
+    </div>`;
+}
+function renderDayBlock(dayObj) {
+  return dayObj.supersets.map((ss, i) => `<h3>Superset ${i+1}</h3>${ss.map(renderExSlot).join('')}`).join('');
+}
+function renderProgram() {
+  document.getElementById('programStartDate').value = DATA.programStartDate || '';
+  const week = getProgramWeek();
+  const phaseIdx = getPhaseIndexForWeek(week);
+  const phase = PROGRAM[phaseIdx];
+  document.getElementById('programStatus').textContent = DATA.programStartDate
+    ? `Week ${week} of 12 — ${phase.name} (weeks ${phase.weeks[0]}–${phase.weeks[1]})`
+    : 'Set a start date to auto-track your week';
+
+  const dayPicker = document.getElementById('dayPicker');
+  dayPicker.innerHTML = phase.days.map((d, i) => `<button class="pill ${DATA.currentDayIndex===i?'active':''}" data-day="${i}">${d.label}</button>`).join('');
+  dayPicker.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => {
+    DATA.currentDayIndex = parseInt(p.dataset.day, 10); saveData(); renderProgram(); renderToday();
+  }));
+
+  const day = phase.days[DATA.currentDayIndex] || phase.days[0];
+  document.getElementById('programDayTitle').textContent = `${phase.name} · ${day.label}`;
+  document.getElementById('programDay').innerHTML = renderDayBlock(day);
+
+  document.getElementById('programOverview').innerHTML = PROGRAM.map(ph => `
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; font-weight:600; padding:6px 0;">${ph.name} (weeks ${ph.weeks[0]}–${ph.weeks[1]})</summary>
+      ${ph.days.map(d => `<details style="margin:6px 0 6px 14px;"><summary style="cursor:pointer;">${d.label}</summary>${renderDayBlock(d)}</details>`).join('')}
+    </details>
+  `).join('');
+}
+document.getElementById('programStartDate').addEventListener('change', (e) => {
+  DATA.programStartDate = e.target.value || null; saveData(); renderProgram(); renderToday();
+});
+document.getElementById('logProgramBtn').addEventListener('click', () => {
+  const week = getProgramWeek();
+  const phase = PROGRAM[getPhaseIndexForWeek(week)];
+  const day = phase.days[DATA.currentDayIndex] || phase.days[0];
+  document.getElementById('exRows').innerHTML = '';
+  day.supersets.forEach(ss => ss.forEach(slot => {
+    addExRow();
+    const row = document.getElementById('exRows').lastElementChild;
+    const sel = row.querySelector('.ex-name');
+    if (!Array.from(sel.options).some(o => o.value === slot.n)) {
+      const opt = document.createElement('option'); opt.value = slot.n; opt.textContent = slot.n; sel.appendChild(opt);
+    }
+    sel.value = slot.n;
+    row.querySelector('.ex-sets').value = 4;
+    row.querySelector('.ex-reps').value = slot.sr;
+    row.querySelector('.ex-notes').value = slot.eq;
+  }));
+  document.getElementById('logName').value = day.label;
+  document.querySelector('[data-tab="log"]').click();
+  toast('Prefilled from ' + day.label);
+});
+
 /* ================= WARMUP TAB ================= */
 function renderWarmup() {
   const phases = ['Raise', 'Mobilize', 'Potentiate'];
@@ -737,7 +990,7 @@ function renderWarmup() {
       </div>
     `).join('');
   }).join('');
-  document.getElementById('warmupSources').innerHTML = `Sequence follows the RAMP protocol (Raise, Activate/Mobilize, Potentiate) developed by Dr. Ian Jeffreys, cross-checked against current dynamic-warm-up guides. Sources:
+  document.getElementById('warmupSources').innerHTML = `Exercises and cues are from your own program doc; sequenced using the RAMP protocol (Raise, Activate/Mobilize, Potentiate) developed by Dr. Ian Jeffreys, cross-checked against current dynamic-warm-up guides. Sources:
     <a href="https://blog.teambuildr.com/understanding-and-implementing-the-ramp-protocol" target="_blank">TeamBuildr</a>,
     <a href="https://www.thirdspace.london/this-space/effective-warm-ups/" target="_blank">Third Space</a>,
     <a href="https://www.strengthlog.com/warm-up-before-lifting/" target="_blank">StrengthLog</a>,
@@ -815,6 +1068,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 /* ================= INIT ================= */
 function renderAll() {
+  renderProgram();
   renderToday();
   renderWarmup();
   renderRecentSessions();
