@@ -138,6 +138,7 @@
 
   <nav class="tabs" id="tabs">
     <button data-tab="today" class="active">Today</button>
+    <button data-tab="warmup">Warmup</button>
     <button data-tab="log">Log Session</button>
     <button data-tab="progress">Progress</button>
     <button data-tab="library">Exercise Library</button>
@@ -167,6 +168,21 @@
     <div class="card">
       <h2>Suggested next session</h2>
       <div id="recommendation"></div>
+    </div>
+  </div>
+
+  <!-- WARMUP -->
+  <div class="panel" id="panel-warmup">
+    <div class="card">
+      <h2>Pre-session warm-up (~8 minutes)</h2>
+      <div class="note-box">
+        Built on the RAMP protocol (Raise → Activate/Mobilize → Potentiate) — the standard structure strength coaches
+        use because it raises body temperature and heart rate before you stretch or load anything, which is both more
+        effective and safer for your back than jumping straight into mobility work cold. Do this before every
+        session, calibration phase or not.
+      </div>
+      <div id="warmupRoutine"></div>
+      <div class="sources" id="warmupSources"></div>
     </div>
   </div>
 
@@ -381,6 +397,27 @@ const EXERCISES = [
     mistakes:['Letting the hips or shoulders rotate toward the anchor — that defeats the point of the exercise'] },
 ];
 
+const WARMUP = [
+  { phase: 'Raise', name: 'Easy row / bike / jump rope / jog in place', dose: '2–3 min, easy pace',
+    cues: ['Goal is just raising heart rate and body temperature — this should feel easy, not winded', 'Do this before any stretching or mobility work, not after'] },
+  { phase: 'Mobilize', name: 'Cat / Cow', dose: '8–10 breaths',
+    cues: ['Inhale as you arch (cow), exhale as you round (cat)', 'Move slowly through your full spine, not just the lower back'] },
+  { phase: 'Mobilize', name: 'Bird Dog', dose: '10 each side, slow & controlled',
+    cues: ['Opposite arm and leg extend together, hips stay level', 'Same movement as your back-care work — this doubles as spine prep'] },
+  { phase: 'Mobilize', name: "World's Greatest Stretch", dose: '5–6 each side',
+    cues: ['Lunge forward, drop the back elbow to the instep, then rotate that arm up toward the ceiling', 'Hits hips, hamstrings, thoracic spine, and shoulders in one move'] },
+  { phase: 'Mobilize', name: 'Scapular Push-Ups', dose: '10 reps',
+    cues: ['Stay in a plank, keep arms straight, let shoulder blades protract/retract', 'Small range of motion — the movement is in the shoulder blades, not the elbows'] },
+  { phase: 'Mobilize', name: 'Leg Kicks (lying flat)', dose: '10 each side',
+    cues: ['Keep the opposite leg pinned to the floor', 'Controlled kick, not a bounce'] },
+  { phase: 'Mobilize', name: 'Tabletop Knee Circles', dose: '5 forward + 5 back, each side',
+    cues: ['Small, controlled circles — this is a hip warm-up, not a stretch to end range'] },
+  { phase: 'Potentiate', name: 'Bodyweight Squats', dose: '15 reps',
+    cues: ['Full range, controlled — this primes the exact pattern you\'ll load next'] },
+  { phase: 'Potentiate', name: 'Push-Ups', dose: '10 reps',
+    cues: ['Primes chest/shoulders/triceps for pressing work'] },
+];
+
 const DEFAULT_DATA = { phase: 'calibration', sessions: [] };
 function cloneDefault() { return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
 
@@ -498,6 +535,10 @@ function renderToday() {
   const rpeTarget = DATA.phase === 'calibration' ? 'RPE 6–7' : 'RPE 7–8 (accessories) / 8–9 (main compounds)';
   document.getElementById('recommendation').innerHTML = `
     <div class="small-muted" style="margin-bottom:8px;">Built from your stalest muscle groups (${staleCats.join(', ')}) at ${rpeTarget}.</div>
+    <div class="exercise-card" style="background:var(--core-soft); border-color:var(--core);">
+      <div class="title-row"><strong>Start with your warm-up</strong><span class="badge core">~8 min</span></div>
+      <div class="small-muted">Raise → mobilize → potentiate — see the "Warmup" tab before you touch a weight.</div>
+    </div>
     ${picks.map(e => `<div class="exercise-card"><div class="title-row"><strong>${e.name}</strong><span class="badge accent">${e.category}</span></div>
       <div class="small-muted">3 sets × 8–12 reps${e.type==='compound' ? ', last set to target RPE' : ''}</div></div>`).join('')}
     <h3>Finish with back-care</h3>
@@ -683,6 +724,26 @@ function renderLibrary() {
   `).join('') || '<div class="empty">No exercises match.</div>';
 }
 
+/* ================= WARMUP TAB ================= */
+function renderWarmup() {
+  const phases = ['Raise', 'Mobilize', 'Potentiate'];
+  const box = document.getElementById('warmupRoutine');
+  box.innerHTML = phases.map(phase => {
+    const steps = WARMUP.filter(w => w.phase === phase);
+    return `<h3>${phase}</h3>` + steps.map(w => `
+      <div class="exercise-card">
+        <div class="title-row"><strong>${w.name}</strong><span class="badge core">${w.dose}</span></div>
+        <ul>${w.cues.map(c=>`<li>${c}</li>`).join('')}</ul>
+      </div>
+    `).join('');
+  }).join('');
+  document.getElementById('warmupSources').innerHTML = `Sequence follows the RAMP protocol (Raise, Activate/Mobilize, Potentiate) developed by Dr. Ian Jeffreys, cross-checked against current dynamic-warm-up guides. Sources:
+    <a href="https://blog.teambuildr.com/understanding-and-implementing-the-ramp-protocol" target="_blank">TeamBuildr</a>,
+    <a href="https://www.thirdspace.london/this-space/effective-warm-ups/" target="_blank">Third Space</a>,
+    <a href="https://www.strengthlog.com/warm-up-before-lifting/" target="_blank">StrengthLog</a>,
+    <a href="https://barbend.com/bird-dog/" target="_blank">BarBend</a>.`;
+}
+
 /* ================= BACK CARE TAB ================= */
 function renderBackCare() {
   const routine = EXERCISES.filter(e => e.type === 'backcare');
@@ -755,6 +816,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 /* ================= INIT ================= */
 function renderAll() {
   renderToday();
+  renderWarmup();
   renderRecentSessions();
   renderCategoryFilter();
   renderLibrary();
